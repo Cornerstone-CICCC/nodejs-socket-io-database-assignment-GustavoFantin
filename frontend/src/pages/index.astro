@@ -1,0 +1,65 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+	<h1>My Fancy WebSocket Chat</h1>
+
+	<form action="" id="chat-form">
+		<input type="text" id="username" placeholder="Enter Username" />
+		<input
+			type="text"
+			name="chat_message"
+			id="chat-message"
+			placeholder="Send message..."
+		/>
+		<button>send</button>
+	</form>
+
+	<ul id="messages"></ul>
+
+	<script type="module">
+		import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
+
+		const socket = io("http://localhost:2500");
+
+		const inputUsername = document.querySelector("#username");
+		const inputMessage = document.querySelector("#chat-message");
+		const form = document.querySelector("#chat-form");
+
+		//for new users, chat history
+		async function fetchChat() {
+			try {
+				const res = await fetch("http://localhost:2500/api/chat");
+				const data = await res.json();
+
+				data.reverse().forEach((u) => {
+					const li = document.createElement("li");
+					li.innerHTML = `<img width=50px src="https://robohash.org/${u.username}?set=set4" \> <span>${u.username ?? "System"}:</span> ${u.message}`;
+					messages.appendChild(li);
+				});
+			} catch (err) {
+				console.error("Failed to load chat history", err);
+			}
+		}
+
+		fetchChat();
+
+		form.addEventListener("submit", (e) => {
+			e.preventDefault();
+
+			socket.emit("sendMessage", {
+				username: inputUsername.value,
+				message: inputMessage.value,
+			});
+			inputMessage.value = "";
+		});
+
+		socket.on("newMessage", (data) => {
+			const messages = document.querySelector("#messages");
+			const li = document.createElement("li");
+			li.innerHTML = `<img width=50px src="https://robohash.org/${data.username}?set=set4" \> <span style="${data.username === inputUsername.value ? "color: green" : "color: black"}">${data.username ?? "System"}:</span> ${data.message}`;
+			messages.appendChild(li);
+		});
+	</script>
+</Layout>
